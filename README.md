@@ -5,7 +5,7 @@ When I was a kid I had a RC car that I really liked to play with, but it pretty 
 
 To start, I took the top off the car and removed the old PCB.  Here's what we see under there:
 
-![Car guts](./empty_car.png)
+![alt text](https://github.com/thebeekeeper/rc/blob/main/empty_car.jpg "Empty Car")
 
 We've got leads to the coil that controls steering and some on the other end to the drive motor.  On the bottom there are 6 slots for AA batteries, so I'm assuming the motor and solenoid will work off 9V.  I checked this by connecting a 9V battery to both pairs of leads and saw that the steering and drive motor still work.  To change direction of both actuators, you can just reverse polarity on the battery.
 
