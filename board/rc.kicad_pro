@@ -494,7 +494,9 @@
       "Net-(IC1-OUT1)": "Power",
       "Net-(IC1-OUT2)": "Power",
       "Net-(IC1-OUT3)": "Power",
-      "Net-(IC1-OUT4)": "Power"
+      "Net-(IC1-OUT4)": "Power",
+      "Net-(IC2-OUT1)": "Power",
+      "Net-(IC2-OUT2)": "Power"
     },
     "netclass_patterns": []
   },

@@ -7,6 +7,8 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 
+#define PWM
+
 #define TAG "drive-bt"
 
 #define LED1 GPIO_NUM_35
@@ -60,12 +62,13 @@ void app_main(void)
 	init_io();
 
 	uint8_t led = 1;
-	//gpio_set_level(MOTOR_A, 0);
-	gpio_set_level(MOTOR_B, 0);
+	gpio_set_level(MOTOR_A, 0);
+	gpio_set_level(MOTOR_B, 1);
 
 	gpio_set_level(STEER_A, 0);
-	gpio_set_level(STEER_B, 0);
+	gpio_set_level(STEER_B, 1);
 
+#ifdef PWM
      // Set the LEDC peripheral configuration
     example_ledc_init();
     // Set duty to 50%
@@ -77,6 +80,19 @@ void app_main(void)
     uint32_t dc = 0;
     int32_t delta = 250;
     int32_t dir = 1;
+ESP_LOGI(TAG, "Setting to 4000");
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 4000));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+ESP_LOGI(TAG, "Setting to 6000");
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 6000));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+ESP_LOGI(TAG, "Setting to 8000");
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 8000));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        #endif
 
 	while(1) {
 		gpio_set_level(LED1, led);
@@ -84,7 +100,7 @@ void app_main(void)
         //gpio_set_level(STEER_A, led);
         //gpio_set_level(STEER_B, !led);
         led = !led;
-
+#ifdef PWM
         ESP_LOGI(TAG, "setting dc to %lu", dc);
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
         // Update duty to apply the new value
@@ -97,6 +113,7 @@ void app_main(void)
         if(dc < 250) {
             dir = -1 * dir;
         }
+        #endif
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 
@@ -116,8 +133,10 @@ void init_io(void) {
     gpio_config(&io_conf);
     io_conf.pin_bit_mask = (1ULL << STEER_B);
     gpio_config(&io_conf);
-    //io_conf.pin_bit_mask = (1ULL << MOTOR_A);
-    //gpio_config(&io_conf);
+    #ifndef PWM
+    io_conf.pin_bit_mask = (1ULL << MOTOR_A);
+    gpio_config(&io_conf);
+    #endif
     io_conf.pin_bit_mask = (1ULL << MOTOR_B);
     gpio_config(&io_conf);
 }
