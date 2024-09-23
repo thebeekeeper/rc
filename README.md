@@ -25,4 +25,3 @@ To drive the motor and solenoid I was initially planning to build couple of stan
 
 Got the rev0 boards back an assembled and the drive motor just whines and doesn't turn!  Tried adding some capacitance but that didn't really help.  I can't find any specs for the motor that's installed on the machine so I'm guessing the driver IC isn't able to source the stall current for the motor when it's connected to the gearbox.  I tested the driver with a motor I have lying around with no mechanical load on it and it worked fine.  The `A3909GLNTR` datasheet says you can parallel the outputs to get more current.  Tried that and it starts up the motor and runs no problem.  Added a second driver IC and updated the layout for a rev1 board.
 
-test test
