@@ -24,3 +24,5 @@ I've been using `esp32` devices at work for a while, so I decided on the `ESP32-
 To drive the motor and solenoid I was initially planning to build couple of standard H-bridge circuits, but then I found [A3909GLNTR](https://www.digikey.com/en/products/detail/allegro-microsystems/A3909GLNTR-T/3979655) which is an IC with the exact circuit I'd be building anyway so I decided to use that.  I've used some Allegro parts in other designs and they've worked well, so this should be pretty easy.
 
 Got the rev0 boards back an assembled and the drive motor just whines and doesn't turn!  Tried adding some capacitance but that didn't really help.  I can't find any specs for the motor that's installed on the machine so I'm guessing the driver IC isn't able to source the stall current for the motor when it's connected to the gearbox.  I tested the driver with a motor I have lying around with no mechanical load on it and it worked fine.  The `A3909GLNTR` datasheet says you can parallel the outputs to get more current.  Tried that and it starts up the motor and runs no problem.  Added a second driver IC and updated the layout for a rev1 board.
+
+test test
