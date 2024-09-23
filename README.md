@@ -1,8 +1,6 @@
 TURBO TORNADO
 =============
 
-test
-
 When I was a kid I had a RC car that I really liked to play with, but it pretty rarely worked.  30+ years later I have a couple of decades of experience building embedded systems to control motors and stuff like that so I decided to design replacement electronics for it so my kid can play with it.
 
 To start, I took the top off the car and removed the old PCB.  Here's what we see under there:
