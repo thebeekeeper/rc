@@ -38,6 +38,25 @@
 #define LEDC_DUTY (1096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define LEDC_FREQUENCY (200)            // Frequency in Hertz. Set frequency at 4 kHz
 
+void update_outputs(int8_t drive, int8_t steer) {
+    uint32_t dc = 0;
+    if(drive > 0) {
+        ESP_LOGI(TAG, "setting drive dc");
+        dc = drive * 53; 
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
+        // Update duty to apply the new value
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+    }
+    else {
+        dc = 0;
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
+        // Update duty to apply the new value
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+
+    }
+
+}
+
 void init_io(void);
 
 static void example_ledc_init(void)
@@ -58,7 +77,7 @@ static void example_ledc_init(void)
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
         .gpio_num = LEDC_OUTPUT_IO,
-        .duty = 4096, // Set duty to 0%
+        .duty = 0, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 }
@@ -112,20 +131,20 @@ void app_main(void)
         gpio_set_level(LED1, led);
         gpio_set_level(LED2, !led);
 #ifdef PWM
-        ESP_LOGI(TAG, "setting dc to %lu", dc);
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
+        //ESP_LOGI(TAG, "setting dc to %lu", dc);
+        //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
         // Update duty to apply the new value
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
-        dc += (dir * delta);
-        if (dc > 7000)
-        {
-            dir = -1 * dir;
-        }
-        if (dc < 250)
-        {
-            dir = -1 * dir;
-        }
+        //dc += (dir * delta);
+        //if (dc > 7000)
+       // {
+       //     dir = -1 * dir;
+        //}
+        //if (dc < 250)
+       // {
+        //    dir = -1 * dir;
+       // }
 #else
         gpio_set_level(STEER_A, led);
         gpio_set_level(STEER_B, !led);

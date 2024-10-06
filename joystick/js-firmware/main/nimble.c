@@ -83,7 +83,7 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
                 .uuid = &gatt_svr_chr_status_uuid.u,     //!! UUID as given above
                 .access_cb = gatt_svr_chr_access, //!! Callback function. When ever this characrstic will be accessed by user, this function will execute
                 .val_handle = &notification_handle,
-                .flags = BLE_GATT_CHR_F_NOTIFY, //!! flags set permissions. status is notify-only
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY, //!! flags set permissions. status is notify-only
             },
             {
                 0, /* No more characteristics in this service. This is necessary */
@@ -105,13 +105,18 @@ static int gatt_svr_chr_access(uint16_t conn_handle, uint16_t attr_handle,
     uint16_t rx_len = 0;
     //MotorConfig_T rx_cfg;
     uint16_t rx_value = 0;
+    uint8_t v[2];
 
     switch (ctxt->op)
     {
     case BLE_GATT_ACCESS_OP_READ_CHR: //!! In case user accessed this characterstic to read its value, bellow lines will execute
-        return 0;
-        //rc = os_mbuf_append(ctxt->om, (const void *)&cfg, sizeof(MotorConfig_T));
-        //return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+            v[0] = js.left_vertical;
+            v[1] = js.right_horizontal;
+            //om = ble_hs_mbuf_from_flat(v, sizeof(v)); //! Value of variable "notification" will be sent as notification.
+
+        rc = os_mbuf_append(ctxt->om, (const void *)v, 2);
+        return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        //return 0;
 
     case BLE_GATT_ACCESS_OP_WRITE_CHR:                                                                      //!! In case user accessed this characterstic to write, bellow lines will executed.
         rc = gatt_svr_chr_write(ctxt->om, min_length, max_length, &characteristic_received_value, &rx_len); //!! Function "gatt_svr_chr_write" will fire.

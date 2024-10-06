@@ -28,6 +28,8 @@
 #include "services/gap/ble_svc_gap.h"
 #include "blecent.h"
 
+extern void update_outputs(int8_t drive, int8_t steer);
+
 #if CONFIG_EXAMPLE_USE_CI_ADDRESS
 #ifdef CONFIG_IDF_TARGET_ESP32
 #define TEST_CI_ADDRESS_CHIP_OFFSET (0)
@@ -51,14 +53,18 @@
 #endif
 
 /*** The UUID of the service containing the subscribable characteristic ***/
+//static const ble_uuid_t * remote_svc_uuid =
+//    BLE_UUID128_DECLARE(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
+//                     	0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);
 static const ble_uuid_t * remote_svc_uuid =
-    BLE_UUID128_DECLARE(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
-                     	0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);
+    BLE_UUID128_DECLARE(0x02, 0x00, 0x12, 0xac, 0x42, 0x02, 0x78, 0xb8, 0xed, 0x11, 0xda, 0x46, 0x42, 0xc6, 0xbb, 0xb2);
 
 /*** The UUID of the subscribable chatacteristic ***/
+//static const ble_uuid_t * remote_chr_uuid =
+//    BLE_UUID128_DECLARE(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
+//                     	0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
 static const ble_uuid_t * remote_chr_uuid =
-    BLE_UUID128_DECLARE(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
-                     	0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
+    BLE_UUID128_DECLARE(0x9e, 0xe5, 0x39, 0x03, 0x81, 0x07, 0xf0, 0xb7, 0x4f, 0x4e, 0x49, 0x5c, 0xc6, 0xaf, 0xc1, 0xe3);
 
 static const char *tag = "NimBLE_BLE_CENT";
 static int blecent_gap_event(struct ble_gap_event *event, void *arg);
@@ -71,14 +77,13 @@ void ble_store_config_init(void);
  * in the remote GATT server is read.
  * Expect to get the recently written data.
  **/
-static int
-blecent_on_custom_read(uint16_t conn_handle,
+static int blecent_on_custom_read(uint16_t conn_handle,
                        const struct ble_gatt_error *error,
                        struct ble_gatt_attr *attr,
                        void *arg)
 {
     MODLOG_DFLT(INFO,
-                "Read complete for the subscribable characteristic; "
+                "Custom Read complete for the subscribable characteristic; "
                 "status=%d conn_handle=%d", error->status, conn_handle);
     if (error->status == 0) {
         MODLOG_DFLT(INFO, " attr_handle=%d value=", attr->handle);
@@ -209,6 +214,7 @@ blecent_custom_gatt_operations(const struct peer* peer)
         goto err;
     }
 
+MODLOG_DFLT(ERROR, "Subscribing to custom");
     /*** Write 0x00 and 0x01 (The subscription code) to the CCCD ***/
     value[0] = 1;
     value[1] = 0;
@@ -277,16 +283,20 @@ blecent_on_write(uint16_t conn_handle,
     int rc;
     const struct peer *peer = peer_find(conn_handle);
 
-    dsc = peer_dsc_find_uuid(peer,
+    /*dsc = peer_dsc_find_uuid(peer,
                              BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
                              BLE_UUID16_DECLARE(BLECENT_CHR_UNR_ALERT_STAT_UUID),
+                             BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));*/
+    dsc = peer_dsc_find_uuid(peer,
+                             remote_svc_uuid,
+                             remote_chr_uuid,
                              BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
     if (dsc == NULL) {
         MODLOG_DFLT(ERROR, "Error: Peer lacks a CCCD for the Unread Alert "
                     "Status characteristic\n");
         goto err;
     }
-
+MODLOG_DFLT(INFO, "writing to subscription");
     value[0] = 1;
     value[1] = 0;
     rc = ble_gattc_write_flat(conn_handle, dsc->dsc.handle,
@@ -329,9 +339,13 @@ blecent_on_read(uint16_t conn_handle,
     int rc;
     const struct peer *peer = peer_find(conn_handle);
 
-    chr = peer_chr_find_uuid(peer,
+    /*chr = peer_chr_find_uuid(peer,
                              BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
-                             BLE_UUID16_DECLARE(BLECENT_CHR_ALERT_NOT_CTRL_PT));
+                             BLE_UUID16_DECLARE(BLECENT_CHR_ALERT_NOT_CTRL_PT));*/
+    chr = peer_chr_find_uuid(peer,
+                             remote_svc_uuid,
+                             remote_chr_uuid
+                             );
     if (chr == NULL) {
         MODLOG_DFLT(ERROR, "Error: Peer doesn't support the Alert "
                     "Notification Control Point characteristic\n");
@@ -370,20 +384,38 @@ static void
 blecent_read_write_subscribe(const struct peer *peer)
 {
     const struct peer_chr *chr;
+    const struct peer_dsc *dsc;
     int rc;
+    uint8_t value[2];
+    MODLOG_DFLT(INFO, "no error blecent_read_write_subscribe");
 
     /* Read the supported-new-alert-category characteristic. */
-    chr = peer_chr_find_uuid(peer,
+    /*chr = peer_chr_find_uuid(peer,
                              BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
-                             BLE_UUID16_DECLARE(BLECENT_CHR_SUP_NEW_ALERT_CAT_UUID));
+                             BLE_UUID16_DECLARE(BLECENT_CHR_SUP_NEW_ALERT_CAT_UUID));*/
+                              chr = peer_chr_find_uuid(peer,
+                             remote_svc_uuid,
+                             remote_chr_uuid);
     if (chr == NULL) {
         MODLOG_DFLT(ERROR, "Error: Peer doesn't support the Supported New "
                     "Alert Category characteristic\n");
         goto err;
     }
+    else {
+        MODLOG_DFLT(INFO, "Peer has desired characteristic");
+    }
+    MODLOG_DFLT(INFO, "writing to subscription");
+    dsc = peer_dsc_find_uuid(peer,
+                             remote_svc_uuid,
+                             remote_chr_uuid,
+                             BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
+    value[0] = 1;
+    value[1] = 0;
+    rc = ble_gattc_write_flat(peer->conn_handle, dsc->dsc.handle,
+                              value, sizeof value, blecent_on_subscribe, NULL);
 
-    rc = ble_gattc_read(peer->conn_handle, chr->chr.val_handle,
-                        blecent_on_read, NULL);
+    //rc = ble_gattc_read(peer->conn_handle, chr->chr.val_handle,
+    //                    blecent_on_custom_read, NULL);
     if (rc != 0) {
         MODLOG_DFLT(ERROR, "Error: Failed to read characteristic; rc=%d\n",
                     rc);
@@ -392,8 +424,15 @@ blecent_read_write_subscribe(const struct peer *peer)
 
     return;
 err:
+    MODLOG_DFLT(ERROR, "didn't find chr in read_write_subscribe");
     /* Terminate the connection. */
     ble_gap_terminate(peer->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+}
+
+void read_test(void) {
+    //int rc;
+    //rc = ble_gattc_read(peer->conn_handle, chr->chr.val_handle,
+    //                    blecent_on_custom_read, NULL);
 }
 
 /**
@@ -422,6 +461,7 @@ blecent_on_disc_complete(const struct peer *peer, int status, void *arg)
      * write, and subscribe to notifications for the ANS service.
      */
     blecent_read_write_subscribe(peer);
+    //ESP_LOGW("BT", "read_write_subscribe not called");
 }
 
 /**
@@ -562,19 +602,19 @@ blecent_should_connect(const struct ble_gap_disc_desc *disc)
         peer_addr[5] = 0xC3;
         peer_addr[0] = TEST_CI_ADDRESS_CHIP_OFFSET;
 #endif // !CONFIG_EXAMPLE_USE_CI_ADDRESS
-        if (memcmp(peer_addr, disc->addr.val, sizeof(disc->addr.val)) != 0) {
-            return 0;
+        if (memcmp(peer_addr, disc->addr.val, sizeof(disc->addr.val)) == 0) {
+            return 1;
         }
     }
 
     /* The device has to advertise support for the Alert Notification
      * service (0x1811).
      */
-    for (i = 0; i < fields.num_uuids16; i++) {
-        if (ble_uuid_u16(&fields.uuids16[i].u) == BLECENT_SVC_ALERT_UUID) {
-            return 1;
-        }
-    }
+    //for (i = 0; i < fields.num_uuids16; i++) {
+    //    if (ble_uuid_u16(&fields.uuids16[i].u) == BLECENT_SVC_ALERT_UUID) {
+    //        return 1;
+    //    }
+   // }
 
     return 0;
 }
@@ -815,6 +855,10 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
                     event->notify_rx.conn_handle,
                     event->notify_rx.attr_handle,
                     OS_MBUF_PKTLEN(event->notify_rx.om));
+        uint8_t js_values[2];
+        os_mbuf_copydata(event->notify_rx.om, 0, 2, js_values);
+        MODLOG_DFLT(INFO, "jsA: %u\tjsB: %u", js_values[0], js_values[1]);
+        update_outputs((int8_t)js_values[0], (int8_t)js_values[1]);
 
         /* Attribute data is contained in event->notify_rx.om. Use
          * `os_mbuf_copydata` to copy the data received in notification mbuf */
@@ -975,7 +1019,7 @@ void init_ble(void)
     assert(rc == 0);
 
     /* Set the default device name. */
-    rc = ble_svc_gap_device_name_set("nimble-blecent");
+    rc = ble_svc_gap_device_name_set("drive-bt");
     assert(rc == 0);
 
     /* XXX Need to have template for store */
