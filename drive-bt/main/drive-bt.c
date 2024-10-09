@@ -21,6 +21,8 @@
 
 #define TAG "drive-bt"
 
+void init_io(void);
+
 #define LED1 GPIO_NUM_35
 #define LED2 GPIO_NUM_36
 
@@ -31,33 +33,70 @@
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
-// #define LEDC_OUTPUT_IO          (5) // Define the output GPIO
-#define LEDC_OUTPUT_IO (MOTOR_A) // Define the output GPIO
-#define LEDC_CHANNEL LEDC_CHANNEL_0
+//#define LEDC_OUTPUT_IO (MOTOR_A) // Define the output GPIO
+//#define LEDC_OUTPUT_B (MOTOR_B)
+#define MOTOR_A_CHANNEL LEDC_CHANNEL_0
+#define MOTOR_B_CHANNEL LEDC_CHANNEL_1
+#define STEER_A_CHANNEL LEDC_CHANNEL_2
+#define STEER_B_CHANNEL LEDC_CHANNEL_3
 #define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY (1096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
+//#define LEDC_DUTY (1096)                // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define LEDC_FREQUENCY (200)            // Frequency in Hertz. Set frequency at 4 kHz
 
+// called from the BLE handler
 void update_outputs(int8_t drive, int8_t steer) {
     uint32_t dc = 0;
-    if(drive > 0) {
-        ESP_LOGI(TAG, "setting drive dc");
+    if(drive > 10) {
         dc = drive * 53; 
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
-        // Update duty to apply the new value
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+        ESP_LOGI(TAG, "setting drive dc forward: %lu", dc);
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_A_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_A_CHANNEL));
+        // turn off channel B
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_B_CHANNEL, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_B_CHANNEL));
+    }
+    else if(drive < 10) {
+        dc = drive * 53; 
+        ESP_LOGI(TAG, "setting drive dc reverse: %lu", dc);
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_A_CHANNEL, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_A_CHANNEL));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_B_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_B_CHANNEL));
     }
     else {
         dc = 0;
-        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
-        // Update duty to apply the new value
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_A_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_A_CHANNEL));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_B_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_B_CHANNEL));
     }
 
+    if(steer> 10) {
+        dc = steer* 53; 
+        ESP_LOGI(TAG, "setting steer left: %lu", dc);
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_A_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_A_CHANNEL));
+        // turn off channel B
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_B_CHANNEL, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_B_CHANNEL));
+    }
+    else if(drive < 10) {
+        dc = drive * 53; 
+        ESP_LOGI(TAG, "setting steer right: %lu", dc);
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_A_CHANNEL, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_A_CHANNEL));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_B_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_B_CHANNEL));
+    }
+    else {
+        dc = 0;
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_A_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_A_CHANNEL));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_B_CHANNEL, dc));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_B_CHANNEL));
+    }
 }
 
-void init_io(void);
 
 static void example_ledc_init(void)
 {
@@ -73,13 +112,43 @@ static void example_ledc_init(void)
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel = {
         .speed_mode = LEDC_MODE,
-        .channel = LEDC_CHANNEL,
+        .channel = MOTOR_A_CHANNEL,
         .timer_sel = LEDC_TIMER,
         .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = LEDC_OUTPUT_IO,
+        .gpio_num = MOTOR_A,
         .duty = 0, // Set duty to 0%
         .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+
+    ledc_channel_config_t ledc_channel_b = {
+        .speed_mode = LEDC_MODE,
+        .channel = MOTOR_B_CHANNEL,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = MOTOR_B,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_b));
+
+    ledc_channel_config_t ledc_channel_c = {
+        .speed_mode = LEDC_MODE,
+        .channel = STEER_A_CHANNEL,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = STEER_A,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_c));
+
+    ledc_channel_config_t ledc_channel_d = {
+        .speed_mode = LEDC_MODE,
+        .channel = STEER_B_CHANNEL,
+        .timer_sel = LEDC_TIMER,
+        .intr_type = LEDC_INTR_DISABLE,
+        .gpio_num = STEER_B,
+        .duty = 0, // Set duty to 0%
+        .hpoint = 0};
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel_d));
 }
 
 void app_main(void)
@@ -88,64 +157,24 @@ void app_main(void)
     init_io();
 
     uint8_t led = 1;
-    gpio_set_level(MOTOR_A, 0);
-    gpio_set_level(MOTOR_B, 0);
+    //gpio_set_level(MOTOR_A, 0);
     //gpio_set_level(MOTOR_B, 0);
 
-    gpio_set_level(STEER_A, 0);
-    gpio_set_level(STEER_B, 0);
+    //gpio_set_level(STEER_A, 0);
+    //gpio_set_level(STEER_B, 0);
 
 #ifdef PWM
     // Set the LEDC peripheral configuration
     example_ledc_init();
-    // Set duty to 50%
-    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
-    // Update duty to apply the new value
-    // ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-
     init_ble();
-
-    // this is giving me 44% with no load
-    // uint32_t dc = 2500;
-    uint32_t dc = 0;
-    int32_t delta = 250;
-    int32_t dir = 1;
-    /*vTaskDelay(3000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Setting to 4000");
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 4000));
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Setting to 6000");
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 6000));
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Setting to 8000");
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 8000));
-    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    */
 #endif
 
     while (1)
     {
         gpio_set_level(LED1, led);
         gpio_set_level(LED2, !led);
-#ifdef PWM
-        //ESP_LOGI(TAG, "setting dc to %lu", dc);
-        //ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, dc));
-        // Update duty to apply the new value
-        //ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-
-        //dc += (dir * delta);
-        //if (dc > 7000)
-       // {
-       //     dir = -1 * dir;
-        //}
-        //if (dc < 250)
-       // {
-        //    dir = -1 * dir;
-       // }
-#else
+        // useful for testing hardware
+#ifndef PWM
         gpio_set_level(STEER_A, led);
         gpio_set_level(STEER_B, !led);
         gpio_set_level(MOTOR_A, led);
@@ -167,14 +196,14 @@ void init_io(void)
     gpio_config(&io_conf);
     io_conf.pin_bit_mask = (1ULL << LED2);
     gpio_config(&io_conf);
+#ifndef PWM
     io_conf.pin_bit_mask = (1ULL << STEER_A);
     gpio_config(&io_conf);
     io_conf.pin_bit_mask = (1ULL << STEER_B);
     gpio_config(&io_conf);
-#ifndef PWM
     io_conf.pin_bit_mask = (1ULL << MOTOR_A);
     gpio_config(&io_conf);
-#endif
     io_conf.pin_bit_mask = (1ULL << MOTOR_B);
     gpio_config(&io_conf);
+#endif
 }
