@@ -55,8 +55,8 @@ void update_outputs(int8_t drive, int8_t steer) {
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_B_CHANNEL, 0));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_B_CHANNEL));
     }
-    else if(drive < 10) {
-        dc = drive * 53; 
+    else if(drive < -10) {
+        dc = drive * -53; 
         ESP_LOGI(TAG, "setting drive dc reverse: %lu", dc);
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, MOTOR_A_CHANNEL, 0));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_A_CHANNEL));
@@ -71,8 +71,9 @@ void update_outputs(int8_t drive, int8_t steer) {
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, MOTOR_B_CHANNEL));
     }
 
-    if(steer> 10) {
-        dc = steer* 53; 
+    if(steer > 10) {
+        //dc = 3000 + (steer * 53); 
+        dc = 8192;
         ESP_LOGI(TAG, "setting steer left: %lu", dc);
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_A_CHANNEL, dc));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_A_CHANNEL));
@@ -80,8 +81,9 @@ void update_outputs(int8_t drive, int8_t steer) {
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_B_CHANNEL, 0));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_B_CHANNEL));
     }
-    else if(drive < 10) {
-        dc = drive * 53; 
+    else if(steer < -10) {
+        //dc = steer * 53; 
+        dc = 8192;
         ESP_LOGI(TAG, "setting steer right: %lu", dc);
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, STEER_A_CHANNEL, 0));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, STEER_A_CHANNEL));
